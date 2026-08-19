@@ -37,26 +37,29 @@ esac
 AUTH=()
 [ -n "${GITHUB_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
 
+command -v python3 >/dev/null || fail "python3 is required (apt-get install -y python3)"
+
 say "Resolving latest release…"
 RELEASE_JSON="$(curl -fsSL "${AUTH[@]}" -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/${REPO}/releases/latest")" \
   || fail "Could not query releases. Private repo? export GITHUB_TOKEN first."
 
-TAG="$(printf '%s' "$RELEASE_JSON" | grep -m1 '"tag_name"' | cut -d'"' -f4)"
+ASSET="peyk_linux_${ARCH}.tar.gz"
+# Parse tag + API asset URLs (API URLs work for private repos with a token).
+PARSED="$(printf '%s' "$RELEASE_JSON" | PEYK_ASSET="$ASSET" python3 -c '
+import json, os, sys
+r = json.load(sys.stdin)
+assets = {a["name"]: a["url"] for a in r.get("assets", [])}
+print(r.get("tag_name", ""))
+print(assets.get(os.environ["PEYK_ASSET"], ""))
+print(assets.get("checksums.txt", ""))
+')" || fail "Could not parse the release listing."
+TAG="$(sed -n 1p <<<"$PARSED")"
+ASSET_URL="$(sed -n 2p <<<"$PARSED")"
+SUMS_URL="$(sed -n 3p <<<"$PARSED")"
+
 [ -n "$TAG" ] || fail "No release found for ${REPO}. Publish a release first."
 say "Latest release: ${TAG}"
-
-ASSET="peyk_linux_${ARCH}.tar.gz"
-asset_url() { # $1 = asset name → API asset url (works for private repos)
-  printf '%s' "$RELEASE_JSON" | tr ',' '\n' | grep -B0 -A0 "\"name\":\"$1\"" >/dev/null 2>&1 || true
-  printf '%s' "$RELEASE_JSON" \
-    | tr '{' '\n' \
-    | grep "\"name\":\"$1\"" \
-    | grep -o '"url":"[^"]*/assets/[0-9]*"' \
-    | head -1 | cut -d'"' -f4
-}
-ASSET_URL="$(asset_url "$ASSET")"
-SUMS_URL="$(asset_url "checksums.txt")"
 [ -n "$ASSET_URL" ] || fail "Release ${TAG} has no asset ${ASSET}"
 [ -n "$SUMS_URL" ]  || fail "Release ${TAG} has no checksums.txt"
 
@@ -78,5 +81,12 @@ install -m 0755 "${TMP}/peyk" "$BIN"
 ln -sf "$BIN" /usr/local/bin/peyk
 
 say "Installed: $(peyk version)"
-say "Starting server setup (resumable — re-run 'sudo peyk setup' anytime)…"
-exec peyk setup
+
+# When piped through `curl | bash`, stdin is the script itself — the
+# interactive wizard needs the real terminal.
+if [ -r /dev/tty ] && [ -w /dev/tty ]; then
+  say "Starting server setup (resumable — re-run 'sudo peyk setup' anytime)…"
+  exec peyk setup < /dev/tty > /dev/tty 2>&1
+else
+  say "No terminal available. Run the setup wizard with: sudo peyk setup"
+fi
