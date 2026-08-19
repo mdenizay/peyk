@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mdenizay/peyk/internal/caddy"
 	"github.com/mdenizay/peyk/internal/config"
 	"github.com/mdenizay/peyk/internal/execx"
 )
@@ -301,13 +302,7 @@ func applyCaddyEdge(ctx context.Context, env *Env) error {
 	if err := os.MkdirAll(filepath.Join(dir, "sites"), 0o755); err != nil {
 		return err
 	}
-	email := env.Cfg.ACMEEmail
-	caddyfile := "{\n"
-	if email != "" {
-		caddyfile += "\temail " + email + "\n"
-	}
-	caddyfile += "\tadmin off\n}\n\nimport sites/*.caddy\n"
-	if _, err := writeFileIfChanged(filepath.Join(dir, "Caddyfile"), caddyfile, 0o644); err != nil {
+	if _, err := caddy.EnsureRootConfig(env.Cfg.ACMEEmail); err != nil {
 		return err
 	}
 	compose := `# Managed by peyk — edge proxy stack

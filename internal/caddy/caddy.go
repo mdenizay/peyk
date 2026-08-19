@@ -52,6 +52,34 @@ func WriteSite(p *project.Project, slot string) error {
 	return os.WriteFile(sitePath(p.Name), []byte(b.String()), 0o644)
 }
 
+// RootCaddyfile renders the root config. The admin API stays on its default
+// (localhost:2019 *inside* the container — never published to the host), which
+// `caddy reload` requires for graceful, zero-downtime config swaps.
+func RootCaddyfile(acmeEmail string) string {
+	var b strings.Builder
+	b.WriteString("{\n")
+	if acmeEmail != "" {
+		b.WriteString("\temail " + acmeEmail + "\n")
+	}
+	b.WriteString("}\n\nimport sites/*.caddy\n")
+	return b.String()
+}
+
+// EnsureRootConfig writes the root Caddyfile if its content drifted,
+// reporting whether it changed (a change requires a container restart, since
+// an earlier config may have the admin endpoint disabled).
+func EnsureRootConfig(acmeEmail string) (bool, error) {
+	path := filepath.Join(config.CaddyDir(), "Caddyfile")
+	want := RootCaddyfile(acmeEmail)
+	if cur, err := os.ReadFile(path); err == nil && string(cur) == want {
+		return false, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, err
+	}
+	return true, os.WriteFile(path, []byte(want), 0o644)
+}
+
 // RemoveSite deletes the project's site file.
 func RemoveSite(name string) error {
 	err := os.Remove(sitePath(name))
@@ -62,7 +90,20 @@ func RemoveSite(name string) error {
 }
 
 // Reload gracefully applies the current config inside the Caddy container.
+// It self-heals a stale root Caddyfile (e.g. one that disabled the admin
+// endpoint, which reload depends on) by rewriting it and restarting Caddy.
 func Reload(ctx context.Context) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	changed, err := EnsureRootConfig(cfg.ACMEEmail)
+	if err != nil {
+		return err
+	}
+	if changed {
+		return execx.Run(ctx, "docker", "restart", "peyk-caddy")
+	}
 	return execx.Run(ctx, "docker", "exec", "-w", "/etc/caddy", "peyk-caddy", "caddy", "reload", "--config", "/etc/caddy/Caddyfile")
 }
 
