@@ -135,6 +135,12 @@ func applyFirewall(ctx context.Context, _ *Env) error {
 		{"allow", "80/tcp"},
 		{"allow", "443/tcp"},
 		{"allow", "443/udp"}, // HTTP/3
+		// Traffic to Docker-published ports traverses FORWARD, not INPUT:
+		// without these route rules the DOCKER-USER chain below drops every
+		// external packet headed for the Caddy container.
+		{"route", "allow", "proto", "tcp", "from", "any", "to", "any", "port", "80"},
+		{"route", "allow", "proto", "tcp", "from", "any", "to", "any", "port", "443"},
+		{"route", "allow", "proto", "udp", "from", "any", "to", "any", "port", "443"},
 	} {
 		if err := execx.Run(ctx, "ufw", rule...); err != nil {
 			return err
