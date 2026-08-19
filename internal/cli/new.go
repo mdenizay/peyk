@@ -154,6 +154,11 @@ func runNewWizard(ctx context.Context) error {
 	}
 	p.Framework = project.DetectFramework(releaseDir)
 	fmt.Println(i18n.T("new.framework.found", p.Framework))
+	if p.Framework == project.Laravel {
+		ver, exts := project.DetectPHP(releaseDir)
+		p.PHPVersion = ver
+		p.PHPExtensions = exts
+	}
 	project.DefaultsFor(p)
 
 	// 6. Services.

@@ -82,6 +82,13 @@ ln -sf "$BIN" /usr/local/bin/peyk
 
 say "Installed: $(peyk version)"
 
+# Already provisioned? Then this run was just a binary upgrade.
+if grep -qs '"setup_complete": true' /var/lib/peyk/state.json; then
+  systemctl try-restart peyk 2>/dev/null || true
+  say "Server already provisioned — binary updated. You're done."
+  exit 0
+fi
+
 # When piped through `curl | bash`, stdin is the script itself — the
 # interactive wizard needs the real terminal.
 if [ -r /dev/tty ] && [ -w /dev/tty ]; then

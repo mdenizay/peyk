@@ -43,6 +43,7 @@ type Project struct {
 	Port          int      `json:"port"`        // app container port
 	HealthPath    string   `json:"health_path"` // HTTP path probed before switching traffic
 	PHPVersion    string   `json:"php_version,omitempty"`
+	PHPExtensions []string `json:"php_extensions,omitempty"` // installed on top of the base image
 	NodeVersion   string   `json:"node_version,omitempty"`
 	WebhookSecret string   `json:"webhook_secret"`
 	ActiveSlot    string   `json:"active_slot"` // "blue" | "green" | "" (never deployed)

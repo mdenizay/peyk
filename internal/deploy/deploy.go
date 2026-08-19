@@ -39,6 +39,18 @@ func Run(ctx context.Context, cfg config.Config, p *project.Project) error {
 		return err
 	}
 
+	// Re-detect PHP needs each deploy so composer.json changes (new PHP
+	// version, new ext-* requirements) take effect without manual edits.
+	if p.Framework == project.Laravel {
+		if ver, exts := project.DetectPHP(releaseDir); ver != "" {
+			p.PHPVersion = ver
+			p.PHPExtensions = exts
+			if err := p.Save(); err != nil {
+				return err
+			}
+		}
+	}
+
 	image := p.ImageTag(sha)
 	fmt.Println(i18n.T("deploy.build"))
 	if err := p.EnsureDockerfile(releaseDir); err != nil {

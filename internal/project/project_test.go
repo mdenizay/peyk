@@ -104,3 +104,62 @@ func TestOwnerRepo(t *testing.T) {
 		t.Errorf("OwnerRepo(gitlab) = %q, want empty", got)
 	}
 }
+
+func TestDetectPHP(t *testing.T) {
+	dir := t.TempDir()
+	composer := `{
+		"require": {
+			"php": "^8.4",
+			"laravel/framework": "^12.0",
+			"ext-exif": "*",
+			"ext-imagick": "*"
+		}
+	}`
+	if err := os.WriteFile(filepath.Join(dir, "composer.json"), []byte(composer), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ver, exts := DetectPHP(dir)
+	if ver != "8.4" {
+		t.Errorf("version = %q, want 8.4", ver)
+	}
+	want := "exif gd imagick intl"
+	if got := strings.Join(exts, " "); got != want {
+		t.Errorf("extensions = %q, want %q", got, want)
+	}
+}
+
+func TestGeneratedDockerfileRegenerated(t *testing.T) {
+	p := testProject(t)
+	p.PHPVersion = "8.4"
+	p.PHPExtensions = []string{"exif", "intl"}
+	dir := t.TempDir()
+	if err := p.EnsureDockerfile(dir); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, "Dockerfile"))
+	if !strings.Contains(string(b), "serversideup/php:8.4-fpm-nginx") {
+		t.Errorf("Dockerfile missing PHP 8.4 base:\n%s", b)
+	}
+	if !strings.Contains(string(b), "install-php-extensions exif intl") {
+		t.Errorf("Dockerfile missing extension install:\n%s", b)
+	}
+	// A peyk-generated Dockerfile is regenerated when the manifest changes…
+	p.PHPVersion = "8.5"
+	if err := p.EnsureDockerfile(dir); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(filepath.Join(dir, "Dockerfile"))
+	if !strings.Contains(string(b), "serversideup/php:8.5-fpm-nginx") {
+		t.Errorf("generated Dockerfile was not regenerated:\n%s", b)
+	}
+	// …but a project-supplied Dockerfile is never touched.
+	custom := "FROM php:8.3\n"
+	os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte(custom), 0o644)
+	if err := p.EnsureDockerfile(dir); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(filepath.Join(dir, "Dockerfile"))
+	if string(b) != custom {
+		t.Errorf("project's own Dockerfile was overwritten:\n%s", b)
+	}
+}
