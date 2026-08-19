@@ -163,3 +163,27 @@ func TestGeneratedDockerfileRegenerated(t *testing.T) {
 		t.Errorf("project's own Dockerfile was overwritten:\n%s", b)
 	}
 }
+
+func TestDetectPHPFromLock(t *testing.T) {
+	dir := t.TempDir()
+	// composer.json admits 8.3, but the lock pins packages needing 8.4.
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{"require":{"php":"^8.3","laravel/framework":"^12.0"}}`), 0o644)
+	lock := `{
+		"packages": [
+			{"name": "symfony/console", "require": {"php": ">=8.4.1"}},
+			{"name": "spatie/image", "require": {"php": "^8.2", "ext-exif": "*", "ext-imagick": "*"}}
+		],
+		"packages-dev": [
+			{"name": "phpunit/phpunit", "require": {"php": ">=8.5", "ext-xdebug": "*"}}
+		]
+	}`
+	os.WriteFile(filepath.Join(dir, "composer.lock"), []byte(lock), 0o644)
+	ver, exts := DetectPHP(dir)
+	if ver != "8.4" {
+		t.Errorf("version = %q, want 8.4 (dev packages must not count)", ver)
+	}
+	got := strings.Join(exts, " ")
+	if got != "exif gd imagick intl" {
+		t.Errorf("extensions = %q, want %q", got, "exif gd imagick intl")
+	}
+}

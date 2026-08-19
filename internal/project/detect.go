@@ -50,37 +50,62 @@ var bundledExtensions = map[string]bool{
 	"xmlwriter": true, "zip": true, "zlib": true,
 }
 
-// DetectPHP reads composer.json and returns the PHP version the project needs
-// (e.g. "8.4"; empty when unknown) and the non-bundled extensions to install.
+var phpVersionRe = regexp.MustCompile(`8\.\d+`)
+
+// maxPHPMinor returns the highest 8.x mentioned in a constraint string:
+// "^8.4" → "8.4", "^8.2|^8.3" → "8.3". Minor versions stay single-digit
+// (8.10 would sort wrong lexically) for the foreseeable future.
+func maxPHPMinor(current, constraint string) string {
+	for _, m := range phpVersionRe.FindAllString(constraint, -1) {
+		if m > current {
+			current = m
+		}
+	}
+	return current
+}
+
+// DetectPHP inspects composer.json AND composer.lock and returns the PHP
+// version the project needs (e.g. "8.4"; empty when unknown) plus the
+// non-bundled extensions to install.
+//
+// The lock file matters: it is often generated on a newer PHP than
+// composer.json's constraint admits, locking package versions that require
+// that newer PHP — the image must satisfy the lock, not just composer.json.
 func DetectPHP(dir string) (version string, extensions []string) {
-	b, err := os.ReadFile(filepath.Join(dir, "composer.json"))
-	if err != nil {
-		return "", nil
-	}
-	var c struct {
-		Require map[string]string `json:"require"`
-	}
-	if json.Unmarshal(b, &c) != nil {
-		return "", nil
-	}
-	// Pick the highest 8.x mentioned in the constraint: "^8.4" → 8.4,
-	// "^8.2|^8.3" → 8.3. Anything a locked dependency additionally requires
-	// is the app author's constraint to reflect in composer.json's php field.
-	if constraint, ok := c.Require["php"]; ok {
-		best := ""
-		for _, m := range regexp.MustCompile(`8\.\d+`).FindAllString(constraint, -1) {
-			if m > best {
-				best = m
+	extSet := map[string]bool{"intl": true, "exif": true, "gd": true} // Laravel-ecosystem baseline
+
+	if b, err := os.ReadFile(filepath.Join(dir, "composer.json")); err == nil {
+		var c struct {
+			Require map[string]string `json:"require"`
+		}
+		if json.Unmarshal(b, &c) == nil {
+			version = maxPHPMinor(version, c.Require["php"])
+			for k := range c.Require {
+				if name, ok := strings.CutPrefix(k, "ext-"); ok {
+					extSet[strings.ToLower(name)] = true
+				}
 			}
 		}
-		version = best
 	}
-	extSet := map[string]bool{"intl": true, "exif": true, "gd": true} // Laravel-ecosystem baseline
-	for k := range c.Require {
-		if name, ok := strings.CutPrefix(k, "ext-"); ok {
-			extSet[strings.ToLower(name)] = true
+
+	if b, err := os.ReadFile(filepath.Join(dir, "composer.lock")); err == nil {
+		var l struct {
+			Packages []struct {
+				Require map[string]string `json:"require"`
+			} `json:"packages"` // production packages only; packages-dev never ships
+		}
+		if json.Unmarshal(b, &l) == nil {
+			for _, pkg := range l.Packages {
+				version = maxPHPMinor(version, pkg.Require["php"])
+				for k := range pkg.Require {
+					if name, ok := strings.CutPrefix(k, "ext-"); ok {
+						extSet[strings.ToLower(name)] = true
+					}
+				}
+			}
 		}
 	}
+
 	for name := range extSet {
 		if !bundledExtensions[name] {
 			extensions = append(extensions, name)
