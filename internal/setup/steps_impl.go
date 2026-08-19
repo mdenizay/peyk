@@ -298,46 +298,7 @@ func applyCaddyEdge(ctx context.Context, env *Env) error {
 			return err
 		}
 	}
-	dir := config.CaddyDir()
-	if err := os.MkdirAll(filepath.Join(dir, "sites"), 0o755); err != nil {
-		return err
-	}
-	if _, err := caddy.EnsureRootConfig(env.Cfg.ACMEEmail); err != nil {
-		return err
-	}
-	compose := `# Managed by peyk — edge proxy stack
-name: peyk-edge
-services:
-  caddy:
-    image: caddy:2-alpine
-    container_name: peyk-caddy
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./sites:/etc/caddy/sites:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - peyk-edge
-networks:
-  peyk-edge:
-    external: true
-volumes:
-  caddy_data:
-  caddy_config:
-`
-	if _, err := writeFileIfChanged(filepath.Join(dir, "docker-compose.yml"), compose, 0o644); err != nil {
-		return err
-	}
-	return execx.RunDir(ctx, dir, "docker", "compose", "up", "-d", "--wait")
+	return caddy.EnsureEdgeStack(ctx, env.Cfg.ACMEEmail)
 }
 
 func applyPeykDaemon(ctx context.Context, env *Env) error {

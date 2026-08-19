@@ -45,6 +45,7 @@ type Project struct {
 	PHPVersion    string   `json:"php_version,omitempty"`
 	PHPExtensions []string `json:"php_extensions,omitempty"` // installed on top of the base image
 	NodeVersion   string   `json:"node_version,omitempty"`
+	TLSMode       string   `json:"tls_mode,omitempty"` // "" = HTTP/TLS-ALPN challenge, "cloudflare-dns" = DNS-01 via Cloudflare
 	WebhookSecret string   `json:"webhook_secret"`
 	ActiveSlot    string   `json:"active_slot"` // "blue" | "green" | "" (never deployed)
 	CurrentSHA    string   `json:"current_sha,omitempty"`

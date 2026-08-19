@@ -45,6 +45,7 @@ func Execute(version string) error {
 		newListCmd(),
 		newLogsCmd(),
 		newEnvCmd(),
+		newCloudflareCmd(),
 		newRemoveCmd(),
 		newServeCmd(),
 		newSelfUpdateCmd(),

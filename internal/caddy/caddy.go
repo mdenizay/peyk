@@ -29,6 +29,11 @@ func WriteSite(p *project.Project, slot string) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Managed by peyk — project %s (slot %s)\n", p.Name, slot)
 	fmt.Fprintf(&b, "%s {\n", strings.Join(p.Domains, ", "))
+	if p.TLSMode == "cloudflare-dns" {
+		// DNS-01 challenge: works behind Cloudflare's proxy (orange cloud),
+		// where HTTP/TLS-ALPN challenges cannot reach the origin.
+		fmt.Fprintf(&b, "\ttls {\n\t\tdns cloudflare {env.CF_API_TOKEN}\n\t}\n")
+	}
 	fmt.Fprintf(&b, "\tencode zstd gzip\n")
 	fmt.Fprintf(&b, "\theader -Server\n")
 	// GitHub webhooks arrive at https://<domain>/_peyk/hooks/<project> and
