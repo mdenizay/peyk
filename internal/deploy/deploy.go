@@ -104,7 +104,10 @@ func Run(ctx context.Context, cfg config.Config, p *project.Project) error {
 		fmt.Println(i18n.T("deploy.migrate"))
 		for _, args := range [][]string{
 			{"php", "artisan", "storage:link"},
-			{"php", "artisan", "migrate", "--force", "--isolated"},
+			// No --isolated: peyk already serializes deploys per project via
+			// flock, and --isolated needs a cache_locks table that does not
+			// exist before the very first migration runs.
+			{"php", "artisan", "migrate", "--force"},
 			{"php", "artisan", "optimize"},
 		} {
 			execArgs := append([]string{"--profile", target, "exec", "-T", appSvc}, args...)
