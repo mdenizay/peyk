@@ -1,0 +1,90 @@
+package i18n
+
+var catalog = map[string]entry{
+	// Generic
+	"yes":       {"yes", "evet"},
+	"no":        {"no", "hayır"},
+	"done":      {"done", "tamam"},
+	"skipped":   {"skipped", "atlandı"},
+	"failed":    {"failed", "başarısız"},
+	"running":   {"running", "çalışıyor"},
+	"stopped":   {"stopped", "durdu"},
+	"continue":  {"Continue", "Devam et"},
+	"cancelled": {"cancelled", "iptal edildi"},
+
+	// Setup
+	"setup.title":         {"Peyk server setup", "Peyk sunucu kurulumu"},
+	"setup.pick.lang":     {"Language / Dil", "Language / Dil"},
+	"setup.pick.steps":    {"Select the steps to apply (space toggles, enter confirms):", "Uygulanacak adımları seç (boşluk seçer, enter onaylar):"},
+	"setup.resume":        {"Previous setup found — resuming from where it left off.", "Önceki kurulum bulundu — kaldığı yerden devam ediliyor."},
+	"setup.step.start":    {"[%d/%d] %s", "[%d/%d] %s"},
+	"setup.step.done":     {"  ✓ %s", "  ✓ %s"},
+	"setup.step.skip":     {"  - %s (already applied)", "  - %s (zaten uygulanmış)"},
+	"setup.step.fail":     {"  ✗ %s: %v", "  ✗ %s: %v"},
+	"setup.complete":      {"Setup complete. Run `peyk new` to add your first project.", "Kurulum tamamlandı. İlk projeni eklemek için `peyk new` çalıştır."},
+	"setup.need.root":     {"setup must run as root (use sudo)", "kurulum root olarak çalıştırılmalı (sudo kullan)"},
+	"setup.need.ubuntu":   {"unsupported OS: peyk supports Ubuntu 22.04 and 24.04", "desteklenmeyen işletim sistemi: peyk, Ubuntu 22.04 ve 24.04 destekler"},
+	"setup.email.prompt":  {"E-mail for Let's Encrypt certificates:", "Let's Encrypt sertifikaları için e-posta:"},
+	"setup.retry.hint":    {"Fix the problem and run `peyk setup` again — it resumes automatically.", "Sorunu giderip `peyk setup` komutunu tekrar çalıştır — otomatik devam eder."},
+
+	// Setup step names & descriptions
+	"step.system-update.name":         {"System update", "Sistem güncellemesi"},
+	"step.system-update.desc":         {"Runs apt-get update && upgrade to bring the OS fully up to date.", "apt-get update && upgrade ile işletim sistemini tamamen günceller."},
+	"step.docker.name":                {"Docker Engine", "Docker Engine"},
+	"step.docker.desc":                {"Installs Docker Engine and the Compose plugin from Docker's official repository. Required.", "Docker Engine ve Compose eklentisini Docker'ın resmi deposundan kurar. Zorunlu."},
+	"step.unattended-upgrades.name":   {"Automatic security updates", "Otomatik güvenlik güncellemeleri"},
+	"step.unattended-upgrades.desc":   {"Enables unattended-upgrades so security patches install automatically.", "Güvenlik yamalarının otomatik kurulması için unattended-upgrades'i etkinleştirir."},
+	"step.firewall.name":              {"Firewall (ufw)", "Güvenlik duvarı (ufw)"},
+	"step.firewall.desc":              {"Allows only SSH(22), HTTP(80), HTTPS(443); also fixes the Docker/ufw bypass so container ports are not exposed accidentally.", "Yalnızca SSH(22), HTTP(80), HTTPS(443) portlarına izin verir; container portlarının yanlışlıkla dışarı açılmaması için Docker/ufw bypass'ını da düzeltir."},
+	"step.fail2ban.name":              {"Fail2ban", "Fail2ban"},
+	"step.fail2ban.desc":              {"Bans IPs that brute-force SSH.", "SSH'a kaba kuvvet saldırısı yapan IP'leri engeller."},
+	"step.ssh-hardening.name":         {"SSH hardening", "SSH sertleştirme"},
+	"step.ssh-hardening.desc":         {"Disables password login and root password auth. Applied only if an authorized SSH key exists, so you cannot lock yourself out.", "Parolayla girişi ve root parola girişini kapatır. Kendini dışarıda bırakmaman için yalnızca yetkili bir SSH anahtarı varsa uygulanır."},
+	"step.sysctl-tuning.name":         {"Kernel tuning", "Çekirdek ayarları"},
+	"step.sysctl-tuning.desc":         {"Web-server oriented sysctl values: connection backlog, swappiness, inotify limits.", "Web sunucusuna yönelik sysctl değerleri: bağlantı kuyruğu, swappiness, inotify limitleri."},
+	"step.swap.name":                  {"Swap file", "Swap dosyası"},
+	"step.swap.desc":                  {"Creates a swap file sized to RAM if none exists — protects small servers from OOM kills during builds.", "Swap yoksa RAM'e göre boyutlanmış bir swap dosyası oluşturur — küçük sunucuları build sırasında OOM'dan korur."},
+	"step.journald-limits.name":       {"Log size limits", "Log boyutu sınırları"},
+	"step.journald-limits.desc":       {"Caps journald disk usage so logs cannot fill the disk.", "Logların diski doldurmaması için journald disk kullanımını sınırlar."},
+	"step.caddy-edge.name":            {"Caddy edge proxy", "Caddy edge proxy"},
+	"step.caddy-edge.desc":            {"Starts the Caddy container that terminates TLS (automatic Let's Encrypt) and routes domains to projects. Required.", "TLS sonlandıran (otomatik Let's Encrypt) ve domainleri projelere yönlendiren Caddy container'ını başlatır. Zorunlu."},
+	"step.peyk-daemon.name":           {"Peyk daemon", "Peyk daemon"},
+	"step.peyk-daemon.desc":           {"Installs the systemd service that listens for GitHub webhooks and runs scheduled jobs. Required.", "GitHub webhook'larını dinleyen ve zamanlanmış işleri çalıştıran systemd servisini kurar. Zorunlu."},
+	"step.auto-update.name":           {"Peyk auto-update", "Peyk otomatik güncelleme"},
+	"step.auto-update.desc":           {"Adds a systemd timer that checks GitHub Releases daily and updates peyk after verifying checksums.", "GitHub Releases'ı günlük kontrol eden ve checksum doğrulayarak peyk'i güncelleyen bir systemd timer ekler."},
+
+	// Projects
+	"new.title":            {"New project", "Yeni proje"},
+	"new.repo.prompt":      {"Git repository (SSH URL or owner/repo):", "Git deposu (SSH URL veya owner/repo):"},
+	"new.name.prompt":      {"Project name (lowercase, a-z0-9-):", "Proje adı (küçük harf, a-z0-9-):"},
+	"new.domains.prompt":   {"Domain(s), comma separated:", "Domain(ler), virgülle ayır:"},
+	"new.branch.prompt":    {"Branch to deploy:", "Deploy edilecek branch:"},
+	"new.framework.found":  {"Detected framework: %s", "Algılanan framework: %s"},
+	"new.services.prompt":  {"Select services for this project:", "Bu proje için servisleri seç:"},
+	"new.deploykey.title":  {"Add this deploy key to the repository (read-only):", "Bu deploy key'i depoya ekle (salt okunur):"},
+	"new.deploykey.added":  {"Deploy key added to GitHub automatically.", "Deploy key GitHub'a otomatik eklendi."},
+	"new.webhook.title":    {"Webhook URL and secret (add under repo Settings → Webhooks):", "Webhook URL ve secret (repo Settings → Webhooks altına ekle):"},
+	"new.webhook.added":    {"Webhook added to GitHub automatically.", "Webhook GitHub'a otomatik eklendi."},
+	"new.created":          {"Project %q created. First deploy starting…", "%q projesi oluşturuldu. İlk deploy başlıyor…"},
+
+	// Deploy
+	"deploy.start":     {"Deploying %s (%s)…", "%s deploy ediliyor (%s)…"},
+	"deploy.fetch":     {"Fetching %s…", "%s çekiliyor…"},
+	"deploy.build":     {"Building image…", "Image derleniyor…"},
+	"deploy.migrate":   {"Running migrations…", "Migration'lar çalıştırılıyor…"},
+	"deploy.health":    {"Waiting for health check…", "Health check bekleniyor…"},
+	"deploy.switch":    {"Switching traffic to the new release…", "Trafik yeni sürüme çevriliyor…"},
+	"deploy.cleanup":   {"Stopping the old release…", "Eski sürüm durduruluyor…"},
+	"deploy.ok":        {"Deploy successful: %s @ %s", "Deploy başarılı: %s @ %s"},
+	"deploy.rollback":  {"Deploy failed, previous release kept serving: %v", "Deploy başarısız, önceki sürüm yayında kaldı: %v"},
+
+	// List / status
+	"list.empty":   {"No projects yet. Run `peyk new`.", "Henüz proje yok. `peyk new` çalıştır."},
+	"list.header":  {"PROJECT        FRAMEWORK   STATUS     DOMAINS", "PROJE          FRAMEWORK   DURUM      DOMAINLER"},
+
+	// Self-update
+	"update.checking":  {"Checking for updates…", "Güncellemeler kontrol ediliyor…"},
+	"update.latest":    {"Already on the latest version (%s).", "Zaten en güncel sürümdesin (%s)."},
+	"update.found":     {"New version %s found (current %s), updating…", "Yeni sürüm %s bulundu (mevcut %s), güncelleniyor…"},
+	"update.ok":        {"Updated to %s.", "%s sürümüne güncellendi."},
+}
