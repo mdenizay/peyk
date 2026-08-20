@@ -46,4 +46,4 @@ Ayrıntılı mimari için [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Lisans
 
-Özel repo — tüm hakları saklıdır.
+Tüm hakları saklıdır.
